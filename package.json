@@ -2,6 +2,17 @@
   "name": "@selvo/cli",
   "version": "0.1.0",
   "description": "Selvo CLI — manage your help center from the terminal",
+  "license": "MIT",
+  "author": "Selvo <hello@selvo.co> (https://selvo.co)",
+  "homepage": "https://github.com/selvoapp/cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/selvoapp/cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/selvoapp/cli/issues"
+  },
+  "keywords": ["selvo", "help-center", "cli", "knowledge-base", "api", "saas"],
   "bin": { "selvo": "./dist/cli.cjs" },
   "files": ["dist/cli.cjs"],
   "type": "module",
