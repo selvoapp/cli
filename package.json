@@ -1,0 +1,25 @@
+{
+  "name": "@selvo/cli",
+  "version": "0.1.0",
+  "description": "Selvo CLI — manage your help center from the terminal",
+  "bin": { "selvo": "./dist/cli.cjs" },
+  "files": ["dist/cli.cjs"],
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "tsx src/index.ts"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "commander": "^14.0.0",
+    "@commander-js/extra-typings": "^14.0.0",
+    "@clack/prompts": "^0.9.0",
+    "picocolors": "^1.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "esbuild": "^0.25.0",
+    "@types/node": "^22.0.0"
+  }
+}
