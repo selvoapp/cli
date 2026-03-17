@@ -20,7 +20,8 @@ export function makeArticlesGetCommand(globalOpts: () => GlobalOpts): Command<an
   return new Command('get')
     .description('Get an article by ID or number')
     .argument('<id>', 'Article ID or number')
-    .action(async (id) => {
+    .option('--raw', 'Output raw markdown only (for piping)')
+    .action(async (id, cmdOpts) => {
       const opts = globalOpts()
       const client = createClient(opts)
 
@@ -39,6 +40,13 @@ export function makeArticlesGetCommand(globalOpts: () => GlobalOpts): Command<an
         const error = err as { code: string; message: string }
         outputError(error, opts)
         process.exit(ExitCode.API_ERROR)
+      }
+
+      // --raw: output just the markdown, nothing else
+      if (cmdOpts.raw) {
+        const article = data as Article
+        process.stdout.write((article.content_markdown ?? '') + '\n')
+        return
       }
 
       if (shouldOutputJson(opts)) {
