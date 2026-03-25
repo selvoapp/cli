@@ -130,10 +130,11 @@ selvo articles create --title "FAQ" --collection col_xxx --content "## Question\
 | `--title <title>` | Yes | Article title |
 | `--collection <id>` | Yes | Collection ID |
 | `--content <markdown>` | No | Inline markdown content |
-| `--file <path>` | No | Read markdown from file (overrides --content) |
+| `--file <path>` | No | Read markdown from file. Local images auto-uploaded (see Media section) |
 | `--status <status>` | No | `draft` (default) or `published` |
 | `--excerpt <text>` | No | Short summary for listings and SEO |
 | `--slug <slug>` | No | URL slug (auto-generated from title if omitted) |
+| `--no-writeback` | No | Skip writing uploaded URLs back to the source file |
 
 ### Update article
 
@@ -147,12 +148,13 @@ selvo articles update <id> --excerpt "Updated summary" --seo-title "SEO Override
 |------|-------------|
 | `--title <title>` | New title |
 | `--content <markdown>` | New content (replaces entire body) |
-| `--file <path>` | Read new content from file |
+| `--file <path>` | Read new content from file. Local images auto-uploaded (see Media section) |
 | `--slug <slug>` | New URL slug |
 | `--excerpt <text>` | New excerpt |
 | `--seo-title <title>` | SEO title override |
 | `--seo-description <desc>` | SEO meta description |
 | `--publish` | Publish immediately after updating |
+| `--no-writeback` | Skip writing uploaded URLs back to the source file |
 
 ### Surgical content update
 
@@ -417,6 +419,50 @@ selvo messages delete <id>
 
 > [!CAUTION]
 > This is a **destructive** command — confirm with the user before executing.
+
+---
+
+## Media
+
+### Upload file
+
+```bash
+selvo media upload <file>
+selvo media upload ./screenshot.png
+selvo media upload ./logo.svg --category hc-logo
+```
+
+| Flag | Description |
+|------|-------------|
+| `--category <category>` | `article-image` (default), `hc-logo`, `hc-favicon`, `hc-hero-bg`, `collection-icon` |
+
+Returns the public URL. Supported types: JPEG, PNG, GIF, WebP, SVG, ICO. Max 10 MB for article images.
+
+```json
+{ "url": "https://...", "filename": "screenshot.png", "content_type": "image/png", "size": 245760 }
+```
+
+### Auto-upload from markdown
+
+When `--file` is used with `articles create` or `articles update`, local image paths (`![alt](./path.png)`) are automatically uploaded and replaced with public URLs. The source file is updated on disk — next run won't re-upload.
+
+```bash
+# article.md contains: ![Setup](./images/setup.png)
+selvo articles update 5 --file ./article.md
+# → uploads ./images/setup.png, replaces path in article.md, sends to API
+```
+
+Use `--no-writeback` to skip modifying the source file.
+
+### Agent workflow
+
+Upload first, then reference by URL:
+
+```bash
+url=$(selvo media upload ./diagram.png --json | jq -r '.url')
+selvo articles create --title "Architecture" --collection col_xxx \
+  --content "# Architecture\n\n![Diagram]($url)"
+```
 
 ---
 

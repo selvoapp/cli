@@ -12,6 +12,7 @@ import { makeHelpCenterCommand } from './commands/help-center/index.js'
 import { makeDomainsCommand } from './commands/domains/index.js'
 import { makeAnalyticsCommand } from './commands/analytics/index.js'
 import { makeMessagesCommand } from './commands/messages/index.js'
+import { makeMediaCommand } from './commands/media/index.js'
 
 const program = new Command()
   .name(CLI_NAME)
@@ -84,5 +85,8 @@ program.addCommand(makeAnalyticsCommand(getGlobalOpts))
 
 // Messages command group
 program.addCommand(makeMessagesCommand(getGlobalOpts))
+
+// Media command group
+program.addCommand(makeMediaCommand(getGlobalOpts))
 
 program.parse(process.argv)

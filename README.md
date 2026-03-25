@@ -103,6 +103,23 @@ selvo analytics search                           # Search analytics
 selvo analytics feedback                         # Feedback stats
 ```
 
+### Media
+
+```bash
+selvo media upload ./screenshot.png              # Upload image, get URL
+selvo media upload ./logo.svg --category hc-logo # Upload with explicit category
+```
+
+Local images in markdown are auto-uploaded when using `--file`:
+
+```bash
+# article.md contains: ![Setup](./images/setup.png)
+selvo articles update 5 --file article.md
+# → Uploads ./images/setup.png, replaces path with URL, writes back to file
+```
+
+Use `--no-writeback` to skip writing URLs back to the source file.
+
 ### Messages
 
 ```bash

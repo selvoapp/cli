@@ -1,10 +1,15 @@
 import { Command } from '@commander-js/extra-typings'
-import { readFileSync } from 'fs'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+import { readFileSync, writeFileSync } from 'fs'
 import pc from 'picocolors'
 import { createClient } from '../../lib/client.js'
 import type { GlobalOpts } from '../../lib/config.js'
+import { resolveApiKey, resolveBaseUrl } from '../../lib/config.js'
 import { shouldOutputJson, outputError, ExitCode } from '../../lib/output.js'
 import { withSpinner } from '../../lib/spinner.js'
+import { findLocalImages, replaceImageUrls } from '../../lib/markdown-images.js'
+import { uploadFile } from '../../lib/upload.js'
 
 interface CreatedArticle {
   number: number
@@ -23,6 +28,7 @@ export function makeArticlesCreateCommand(globalOpts: () => GlobalOpts): Command
     .option('--status <status>', 'Initial status (draft, published)')
     .option('--excerpt <text>', 'Article excerpt')
     .option('--slug <slug>', 'Article slug (auto-generated from title if omitted)')
+    .option('--no-writeback', 'Do not write uploaded URLs back to the source file')
     .action(async (opts) => {
       const global = globalOpts()
 
@@ -43,6 +49,83 @@ export function makeArticlesCreateCommand(globalOpts: () => GlobalOpts): Command
           const msg = err instanceof Error ? err.message : String(err)
           process.stderr.write(pc.red(`Error: Could not read file: ${msg}`) + '\n')
           process.exit(ExitCode.VALIDATION_ERROR)
+        }
+      }
+
+      // Auto-upload local images
+      let uploads: Array<{ localPath: string; url: string }> = []
+      if (opts.file && content) {
+        const baseDir = path.resolve(path.dirname(opts.file))
+        const localImages = findLocalImages(content, baseDir)
+
+        if (localImages.length > 0) {
+          const apiKey = resolveApiKey(global)
+          const baseUrl = resolveBaseUrl(global)
+          if (!apiKey) {
+            process.stderr.write(
+              pc.red('Error: No API key found. Run `selvo login` first.') + '\n'
+            )
+            process.exit(ExitCode.VALIDATION_ERROR)
+          }
+
+          // Validate all local files exist before uploading any
+          for (const img of localImages) {
+            if (!fs.existsSync(img.resolvedPath)) {
+              process.stderr.write(
+                pc.red(`Error: Local image not found: ${img.localPath}`) + '\n'
+              )
+              process.exit(ExitCode.VALIDATION_ERROR)
+            }
+          }
+
+          const replacements = new Map<string, string>()
+
+          if (!shouldOutputJson(global)) {
+            process.stderr.write(
+              `Uploading ${localImages.length} image${localImages.length > 1 ? 's' : ''}...\n`
+            )
+          }
+
+          for (const img of localImages) {
+            if (replacements.has(img.localPath)) continue // skip duplicates
+            try {
+              const result = await uploadFile({
+                apiKey,
+                baseUrl,
+                filePath: img.resolvedPath,
+                category: 'article-image',
+              })
+              replacements.set(img.localPath, result.url)
+              uploads.push({ localPath: img.localPath, url: result.url })
+              if (!shouldOutputJson(global)) {
+                process.stderr.write(
+                  pc.green('  ✓') + ` ${img.localPath} → ${pc.dim(result.url)}\n`
+                )
+              }
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err)
+              process.stderr.write(pc.red(`Error uploading ${img.localPath}: ${msg}`) + '\n')
+              process.exit(ExitCode.API_ERROR)
+            }
+          }
+
+          // Replace local paths with URLs in content
+          content = replaceImageUrls(content, replacements)
+
+          // Write back to source file (unless --no-writeback)
+          if (opts.writeback !== false) {
+            try {
+              writeFileSync(opts.file, content, 'utf-8')
+              if (!shouldOutputJson(global)) {
+                process.stderr.write(pc.green('  ✓') + ` Updated ${opts.file} with remote URLs\n`)
+              }
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err)
+              process.stderr.write(
+                pc.yellow(`Warning: Could not write back to ${opts.file}: ${msg}`) + '\n'
+              )
+            }
+          }
         }
       }
 
@@ -75,7 +158,8 @@ export function makeArticlesCreateCommand(globalOpts: () => GlobalOpts): Command
       }
 
       if (shouldOutputJson(global)) {
-        process.stdout.write(JSON.stringify(data, null, 2) + '\n')
+        const output = uploads.length > 0 ? { ...(data as object), uploads } : data
+        process.stdout.write(JSON.stringify(output, null, 2) + '\n')
         return
       }
 
