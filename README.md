@@ -164,6 +164,12 @@ Credentials are stored in `~/.config/selvo/credentials.json`.
 
 ## For AI Agents
 
+Install the CLI skill so your agent knows every command:
+
+```bash
+npx skills add selvoapp/cli
+```
+
 The CLI outputs structured JSON when piped or when `--json` is passed:
 
 ```bash
